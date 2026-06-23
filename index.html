@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Luna — Your Cycle Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #c9184a;
+      --text-main: #fff0f3;
+      --text-muted: #ffc2d1;
+      --glass-bg: rgba(12, 2, 4, 0.62);
+      --glass-border: rgba(255, 120, 150, 0.14);
+      --glass-shadow: 0 8px 40px rgba(0,0,0,0.7);
+      --green: #52b788; --amber: #f4a261; --lavender: #b5a0d8;
+      font-family: 'Outfit', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow-x: hidden; }
+    body {
+      background: url('assets/Perfect Red themed wallpaper for laptop.jpg') center center / cover fixed no-repeat;
+      color: var(--text-main); min-height: 100vh;
+    }
+    body::before { content:''; position:fixed; inset:0; background:rgba(5,0,1,.5); z-index:0; }
+
+    /* ── SPLASH ────────────────────────── */
+    #splash {
+      position:fixed; inset:0; z-index:9999;
+      background:radial-gradient(ellipse at 55% 40%, #3d0015 0%, #1a0008 45%, #050000 100%);
+      display:flex; align-items:center; justify-content:center; overflow:hidden;
+      transition: opacity 1.6s ease, visibility 1.6s ease;
+    }
+    #splash.gone { opacity:0; visibility:hidden; pointer-events:none; }
+    .blob { position:absolute; border-radius:50%; filter:blur(90px); pointer-events:none; z-index:0; }
+    .b1 { width:520px;height:520px;background:#c9184a;opacity:.32;top:-120px;left:-100px;animation:bob1 8s ease-in-out infinite; }
+    .b2 { width:380px;height:380px;background:#ff4d7a;opacity:.25;bottom:-90px;right:-90px;animation:bob2 10s ease-in-out infinite; }
+    .b3 { width:260px;height:260px;background:#ffc2d1;opacity:.18;top:50%;left:50%;transform:translate(-50%,-50%);animation:bob3 6s ease-in-out infinite; }
+    @keyframes bob1{0%,100%{transform:translate(0,0)scale(1)}50%{transform:translate(18px,-28px)scale(1.07)}}
+    @keyframes bob2{0%,100%{transform:translate(0,0)scale(1)}50%{transform:translate(-14px,22px)scale(1.09)}}
+    @keyframes bob3{0%,100%{transform:translate(-50%,-50%)scale(1)}50%{transform:translate(-50%,-50%)scale(1.14)}}
+    .ptcl{position:absolute;border-radius:50%;background:rgba(255,194,209,.55);pointer-events:none;z-index:1;bottom:-20px;animation:rise linear infinite;}
+    @keyframes rise{0%{transform:translateY(0)scale(1);opacity:.7}100%{transform:translateY(-110vh)scale(.3);opacity:0}}
+    .splash-inner{position:relative;z-index:2;text-align:center;animation:appear 1.3s cubic-bezier(.16,1,.3,1) both;}
+    @keyframes appear{from{opacity:0;transform:translateY(48px)scale(.93)}to{opacity:1;transform:none}}
+    .splash-moon{font-size:4rem;display:block;margin-bottom:10px;animation:moonGlow 2.8s ease-in-out infinite;}
+    @keyframes moonGlow{0%,100%{text-shadow:0 0 20px #ffc2d1,0 0 40px #c9184a}50%{text-shadow:0 0 40px #ffc2d1,0 0 90px #c9184a,0 0 140px #ff4d7a}}
+    .splash-title{display:block;font-size:clamp(5rem,14vw,8.5rem);font-weight:900;letter-spacing:18px;background:linear-gradient(135deg,#fff 0%,#ffc2d1 55%,#c9184a 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;}
+    .splash-sub{display:block;margin-top:14px;font-size:.93rem;letter-spacing:5px;text-transform:uppercase;color:rgba(255,194,209,.65);}
+    .splash-bar-wrap{margin:30px auto 0;width:200px;height:2px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden;}
+    .splash-bar-fill{height:100%;width:0%;background:linear-gradient(90deg,#c9184a,#ffc2d1);border-radius:2px;animation:loadBar 3.6s ease forwards;}
+    @keyframes loadBar{from{width:0%}to{width:100%}}
+    .skip-btn{position:absolute;bottom:30px;right:30px;z-index:3;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);color:rgba(255,255,255,.45);padding:9px 20px;border-radius:30px;cursor:pointer;font-family:'Outfit',sans-serif;font-size:.82rem;letter-spacing:1px;transition:all .25s;}
+    .skip-btn:hover{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.3);}
+
+    /* ── APP ──────────────────────────── */
+    #app{position:relative;z-index:1;max-width:860px;margin:0 auto;padding:2.5rem 1.25rem 5rem;opacity:0;transition:opacity 1.2s ease .4s;}
+    #app.visible{opacity:1;}
+    .app-header{text-align:center;margin-bottom:2.5rem;}
+    .app-header h1{font-size:2.8rem;font-weight:900;letter-spacing:6px;background:linear-gradient(135deg,#fff 20%,#ffc2d1 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .app-header p{font-size:.88rem;color:var(--text-muted);letter-spacing:1px;margin-top:6px;}
+
+    /* ── CARDS ────────────────────────── */
+    .card{background:var(--glass-bg);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);border:1px solid var(--glass-border);border-radius:24px;padding:1.75rem;margin-bottom:1.5rem;box-shadow:var(--glass-shadow);transition:transform .3s,box-shadow .3s,border-color .3s;}
+    .card:hover{transform:translateY(-4px);box-shadow:0 18px 55px rgba(0,0,0,.75),0 0 0 1px rgba(255,120,150,.2);border-color:rgba(255,120,150,.3);}
+    .card-title{font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:2.5px;color:var(--text-muted);display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.06);}
+
+    /* ── STATS ────────────────────────── */
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.5rem;}
+    .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1.5rem;}
+    .stat-card{background:var(--glass-bg);backdrop-filter:blur(18px);border:1px solid var(--glass-border);border-radius:24px;padding:1.75rem 1.25rem;text-align:center;box-shadow:var(--glass-shadow);transition:all .3s;}
+    .stat-card:hover{transform:translateY(-4px);border-color:rgba(255,100,140,.4);}
+    .stat-num{font-size:2.6rem;font-weight:800;line-height:1.1;margin-bottom:6px;background:linear-gradient(135deg,#ff8fa3,#c9184a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .stat-num.small{font-size:1.6rem;}
+    .stat-label{font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;}
+
+    /* ── AFFIRMATION ──────────────────── */
+    .affirmation-card{background:linear-gradient(135deg,rgba(50,0,20,.7),rgba(20,0,10,.7));border:1px solid rgba(255,100,140,.2);border-radius:24px;padding:2rem 2.5rem;margin-bottom:1.5rem;text-align:center;position:relative;overflow:hidden;box-shadow:var(--glass-shadow);}
+    .affirmation-card::before{content:'✦';position:absolute;font-size:8rem;color:rgba(255,194,209,.04);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;}
+    .affirmation-text{font-size:1.15rem;font-weight:500;line-height:1.7;font-style:italic;color:#fff;}
+    .affirmation-attr{font-size:.8rem;color:var(--text-muted);margin-top:10px;letter-spacing:1px;}
+    .affirmation-nav{display:flex;justify-content:center;gap:8px;margin-top:14px;}
+    .aff-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,194,209,.3);cursor:pointer;transition:all .2s;}
+    .aff-dot.active{background:#c9184a;transform:scale(1.3);}
+
+    /* ── PHASE BADGE ──────────────────── */
+    .phase-badge{display:inline-block;padding:7px 20px;border-radius:30px;font-weight:700;font-size:.9rem;margin-bottom:14px;}
+    .phase-desc{color:var(--text-muted);line-height:1.8;font-size:.94rem;}
+
+    /* ── HORMONE CHART ────────────────── */
+    .hormone-chart{display:flex;align-items:flex-end;gap:6px;height:80px;margin-bottom:12px;}
+    .hbar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
+    .hbar{width:100%;border-radius:4px 4px 0 0;transition:height .6s ease;min-height:4px;}
+    .hbar-label{font-size:.68rem;color:var(--text-muted);text-align:center;letter-spacing:.5px;}
+    .hormone-legend{display:flex;gap:16px;justify-content:center;margin-top:10px;flex-wrap:wrap;}
+    .hleg{display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--text-muted);}
+    .hleg-dot{width:10px;height:10px;border-radius:50%;}
+
+    /* ── MOOD LOGGER ──────────────────── */
+    .mood-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1rem;}
+    .mood-btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 6px;cursor:pointer;text-align:center;transition:all .2s;font-family:'Outfit',sans-serif;}
+    .mood-btn:hover{background:rgba(255,255,255,.12);transform:scale(1.05);}
+    .mood-btn.sel{background:rgba(201,24,74,.3);border-color:#c9184a;transform:scale(1.08);}
+    .mood-btn span{display:block;font-size:1.6rem;margin-bottom:4px;}
+    .mood-btn p{font-size:.72rem;color:var(--text-muted);}
+
+    /* ── PILL GROUPS ──────────────────── */
+    .pill-group{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+    .pill{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:var(--text-muted);border-radius:30px;padding:7px 16px;cursor:pointer;font-family:'Outfit',sans-serif;font-size:.82rem;transition:all .2s;}
+    .pill:hover{background:rgba(255,255,255,.14);color:#fff;}
+    .pill.sel-red{background:rgba(201,24,74,.3);border-color:#c9184a;color:#fff;}
+    .pill.sel-green{background:rgba(82,183,136,.25);border-color:#52b788;color:#a8e6cf;}
+    .pill.sel-amber{background:rgba(244,162,97,.25);border-color:#f4a261;color:#ffd6b0;}
+    .pill.sel-lav{background:rgba(181,160,216,.25);border-color:#b5a0d8;color:#ddd0ff;}
+
+    /* ── LOG FORM ─────────────────────── */
+    .form-row{margin-bottom:1rem;}
+    .form-row label{display:block;font-size:.8rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-weight:600;}
+    .form-row textarea{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;padding:12px;font-family:'Outfit',sans-serif;font-size:.9rem;resize:vertical;min-height:70px;}
+    .form-row textarea::placeholder{color:rgba(255,255,255,.3);}
+    .form-row textarea:focus{outline:none;border-color:rgba(201,24,74,.5);}
+    .btn-save{display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#c9184a,#ff4d6d);color:#fff;border:none;padding:12px 28px;border-radius:30px;cursor:pointer;font-family:'Outfit',sans-serif;font-weight:700;font-size:.95rem;letter-spacing:.5px;transition:all .25s;box-shadow:0 4px 18px rgba(201,24,74,.4);}
+    .btn-save:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(201,24,74,.55);}
+    .save-msg{font-size:.85rem;color:#52b788;margin-top:10px;text-align:center;min-height:20px;font-weight:600;}
+
+    /* ── RECENT LOGS ──────────────────── */
+    .log-entry{padding:14px 0;border-bottom:1px solid rgba(255,255,255,.06);}
+    .log-entry:last-child{border-bottom:none;}
+    .log-date-label{font-weight:700;font-size:.95rem;color:#fff;margin-bottom:8px;}
+    .log-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;}
+    .tag{font-size:.75rem;padding:3px 12px;border-radius:20px;font-weight:600;}
+    .log-note{font-size:.83rem;color:var(--text-muted);line-height:1.5;}
+
+    /* ── WELLNESS TRACKER ─────────────── */
+    .wellness-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+    .well-item{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:14px 10px;text-align:center;cursor:pointer;transition:all .25s;}
+    .well-item:hover{background:rgba(255,255,255,.1);}
+    .well-item.done{background:rgba(82,183,136,.2);border-color:#52b788;}
+    .well-item .w-icon{font-size:1.8rem;display:block;margin-bottom:6px;}
+    .well-item .w-label{font-size:.72rem;color:var(--text-muted);letter-spacing:.5px;}
+    .well-item.done .w-label{color:#a8e6cf;}
+
+    /* ── TIPS ─────────────────────────── */
+    .tips-list{display:flex;flex-direction:column;gap:10px;}
+    .tip-row{display:flex;align-items:flex-start;gap:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:14px;}
+    .tip-icon{font-size:1.4rem;flex-shrink:0;margin-top:2px;}
+    .tip-text{font-size:.9rem;color:var(--text-muted);line-height:1.6;}
+
+    /* ── PREDICTIONS ──────────────────── */
+    .pred-list{display:flex;flex-direction:column;gap:10px;}
+    .pred-row{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:14px 18px;transition:background .2s;}
+    .pred-row:hover{background:rgba(255,255,255,.08);}
+    .pred-dot{width:13px;height:13px;border-radius:50%;flex-shrink:0;}
+    .pred-info{flex:1;}
+    .pred-name{font-weight:600;font-size:.96rem;color:#fff;}
+    .pred-date{font-size:.82rem;color:var(--text-muted);margin-top:2px;}
+    .pred-tag{font-size:.75rem;font-weight:700;background:rgba(255,255,255,.08);border-radius:20px;padding:4px 12px;color:var(--text-muted);white-space:nowrap;}
+
+    /* ── CALENDAR ─────────────────────── */
+    .cal-nav{display:flex;align-items:center;gap:10px;}
+    .cal-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;border-radius:10px;padding:5px 14px;cursor:pointer;font-size:1.1rem;transition:all .2s;}
+    .cal-btn:hover{background:rgba(255,255,255,.18);}
+    .cal-label{font-size:.97rem;font-weight:700;color:#fff;min-width:170px;text-align:center;}
+    .cal-head{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:.77rem;font-weight:700;color:var(--text-muted);margin-bottom:8px;letter-spacing:1px;}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+    .cal-grid div{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:50%;font-weight:600;font-size:.87rem;border:1px solid transparent;color:rgba(255,255,255,.6);background:rgba(255,255,255,.04);transition:all .2s;}
+    .cal-grid div:hover{background:rgba(255,255,255,.1);}
+    .cal-grid div.empty{background:transparent;border:none;}
+    .cal-grid div.period{background:rgba(201,24,74,.35);border-color:rgba(201,24,74,.65);color:#fff;}
+    .cal-grid div.fertile{background:rgba(82,183,136,.2);border-color:rgba(82,183,136,.5);color:#a8e6cf;}
+    .cal-grid div.ovulation{background:rgba(255,194,209,.35);border:2px solid #ffc2d1;color:#fff;font-weight:800;box-shadow:0 0 18px rgba(255,194,209,.45);}
+    .cal-grid div.today{border:2.5px solid #fff !important;color:#fff;font-weight:800;}
+    .cal-grid div.logged::after{content:'•';position:absolute;bottom:2px;font-size:.5rem;color:#ffc2d1;}
+    .cal-grid div{position:relative;}
+    .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:18px;justify-content:center;font-size:.79rem;color:var(--text-muted);}
+    .leg{display:flex;align-items:center;gap:6px;}
+    .leg-dot{width:11px;height:11px;border-radius:50%;}
+
+    /* ── TABS ─────────────────────────── */
+    .tab-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.5rem;background:rgba(12,2,4,.5);padding:6px;border-radius:18px;border:1px solid var(--glass-border);}
+    .tab-btn{flex:1;min-width:80px;background:transparent;border:none;color:rgba(255,194,209,.6);padding:10px 8px;border-radius:12px;cursor:pointer;font-family:'Outfit',sans-serif;font-size:.82rem;font-weight:600;letter-spacing:.5px;transition:all .25s;}
+    .tab-btn:hover{color:#fff;background:rgba(255,255,255,.08);}
+    .tab-btn.active{background:var(--primary);color:#fff;box-shadow:0 3px 14px rgba(201,24,74,.45);}
+    .tab-content{display:none;}
+    .tab-content.active{display:block;}
+
+    @media(max-width:580px){
+      .grid-2,.grid-3{grid-template-columns:1fr;}
+      .mood-grid{grid-template-columns:repeat(5,1fr);}
+      .wellness-grid{grid-template-columns:repeat(2,1fr);}
+      #app{padding:1.5rem .75rem 3rem;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="blob b3"></div>
+  <div class="splash-inner">
+    <span class="splash-moon">🌙</span>
+    <span class="splash-title">LUNA</span>
+    <span class="splash-sub">Your personalized cycle tracker</span>
+    <div class="splash-bar-wrap"><div class="splash-bar-fill"></div></div>
+  </div>
+  <button class="skip-btn" onclick="dismissSplash()">Skip →</button>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="app-header">
+    <h1>🌙 LUNA</h1>
+    <p>Cycle tracking since June 21, 2026 ✨</p>
+  </div>
+
+  <!-- AFFIRMATION -->
+  <div class="affirmation-card" id="aff-card">
+    <div class="affirmation-text" id="aff-text"></div>
+    <div class="affirmation-attr" id="aff-attr"></div>
+    <div class="affirmation-nav" id="aff-dots"></div>
+  </div>
+
+  <!-- STATS -->
+  <div class="grid-3">
+    <div class="stat-card"><div class="stat-num" id="stat-day">—</div><div class="stat-label">Day of cycle</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-until">—</div><div class="stat-label">Days to period</div></div>
+    <div class="stat-card"><div class="stat-num small" id="stat-phase-mini">—</div><div class="stat-label">Current phase</div></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="showTab('overview')">🏠 Overview</button>
+    <button class="tab-btn" onclick="showTab('log')">📝 Log Today</button>
+    <button class="tab-btn" onclick="showTab('calendar')">📅 Calendar</button>
+    <button class="tab-btn" onclick="showTab('wellness')">💧 Wellness</button>
+    <button class="tab-btn" onclick="showTab('insights')">✨ Insights</button>
+  </div>
+
+  <!-- OVERVIEW TAB -->
+  <div id="tab-overview" class="tab-content active">
+
+    <!-- Phase Card -->
+    <div class="card">
+      <div class="card-title"><span>🌙 Your Current Phase</span></div>
+      <div id="phase-badge" class="phase-badge"></div>
+      <p id="phase-desc" class="phase-desc"></p>
+    </div>
+
+    <!-- Hormone Chart -->
+    <div class="card">
+      <div class="card-title"><span>📊 Estimated Hormone Levels</span></div>
+      <div class="hormone-chart" id="hormone-chart"></div>
+      <div class="hormone-legend">
+        <div class="hleg"><div class="hleg-dot" style="background:#ff8fa3"></div>Estrogen</div>
+        <div class="hleg"><div class="hleg-dot" style="background:#b5a0d8"></div>Progesterone</div>
+        <div class="hleg"><div class="hleg-dot" style="background:#f4a261"></div>LH (Ovulation)</div>
+      </div>
+    </div>
+
+    <!-- Predictions -->
+    <div class="card">
+      <div class="card-title"><span>🔮 Upcoming Predictions</span></div>
+      <div class="pred-list" id="pred-list"></div>
+    </div>
+
+    <!-- Self-care Tips -->
+    <div class="card">
+      <div class="card-title"><span>💆 Phase-Specific Self-Care</span></div>
+      <div class="tips-list" id="tips-list"></div>
+    </div>
+  </div>
+
+  <!-- LOG TAB -->
+  <div id="tab-log" class="tab-content">
+    <div class="card">
+      <div class="card-title"><span>📝 Log Today — <span id="log-today-date"></span></span></div>
+
+      <div class="form-row">
+        <label>How are you feeling? 😊</label>
+        <div class="mood-grid" id="mood-grid">
+          <button class="mood-btn" onclick="selectMood(this,'Great')"><span>😄</span><p>Great</p></button>
+          <button class="mood-btn" onclick="selectMood(this,'Good')"><span>🙂</span><p>Good</p></button>
+          <button class="mood-btn" onclick="selectMood(this,'Okay')"><span>😐</span><p>Okay</p></button>
+          <button class="mood-btn" onclick="selectMood(this,'Low')"><span>😔</span><p>Low</p></button>
+          <button class="mood-btn" onclick="selectMood(this,'Rough')"><span>😢</span><p>Rough</p></button>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Period Flow</label>
+        <div class="pill-group" id="flow-pills">
+          <button class="pill" onclick="togglePill(this,'flow','sel-red')">No period</button>
+          <button class="pill" onclick="togglePill(this,'flow','sel-red')">Spotting</button>
+          <button class="pill" onclick="togglePill(this,'flow','sel-red')">Light</button>
+          <button class="pill" onclick="togglePill(this,'flow','sel-red')">Medium</button>
+          <button class="pill" onclick="togglePill(this,'flow','sel-red')">Heavy</button>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Symptoms</label>
+        <div class="pill-group" id="symptom-pills">
+          <button class="pill" onclick="toggleMultiPill(this,'sel-lav')">Cramps</button>
+          <button class="pill" onclick="toggleMultiPill(this,'sel-lav')">Bloating</button>
+          <button class="pill" onclick="toggleMultiPill(this,'sel-lav')">Headache</button>
+          <button class="pill" onclick="toggleMultiPill(this,'sel-lav')">Backache</button>
+          <button class="pill" onclick="toggleMultiPill(this,'sel-lav')">Fatigue</button>
+          <button class="pill" onclick="toggleMultiPill(this,'sel-lav')">Nausea</button>
+          <button class="pill" onclick="toggleMultiPill(this,'sel-lav')">Cravings</button>
+          <button class="pill" onclick="toggleMultiPill(this,'sel-lav')">Acne</button>
+          <button class="pill" onclick="toggleMultiPill(this,'sel-lav')">Breast tenderness</button>
+          <button class="pill" onclick="toggleMultiPill(this,'sel-lav')">Mood swings</button>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Energy Level</label>
+        <div class="pill-group" id="energy-pills">
+          <button class="pill" onclick="togglePill(this,'energy','sel-amber')">Very low</button>
+          <button class="pill" onclick="togglePill(this,'energy','sel-amber')">Low</button>
+          <button class="pill" onclick="togglePill(this,'energy','sel-amber')">Normal</button>
+          <button class="pill" onclick="togglePill(this,'energy','sel-amber')">High</button>
+          <button class="pill" onclick="togglePill(this,'energy','sel-amber')">Very high</button>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Sleep Quality</label>
+        <div class="pill-group" id="sleep-pills">
+          <button class="pill" onclick="togglePill(this,'sleep','sel-green')">Poor</button>
+          <button class="pill" onclick="togglePill(this,'sleep','sel-green')">Fair</button>
+          <button class="pill" onclick="togglePill(this,'sleep','sel-green')">Good</button>
+          <button class="pill" onclick="togglePill(this,'sleep','sel-green')">Excellent</button>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Notes</label>
+        <textarea id="log-notes" placeholder="Anything you want to remember about today…"></textarea>
+      </div>
+
+      <button class="btn-save" onclick="saveLog()">💾 Save Entry</button>
+      <div class="save-msg" id="save-msg"></div>
+    </div>
+
+    <!-- Recent Logs -->
+    <div class="card">
+      <div class="card-title"><span>📋 Recent Entries</span></div>
+      <div id="recent-logs"><p style="color:var(--text-muted);font-size:.9rem;">No entries yet. Log your first day above!</p></div>
+    </div>
+  </div>
+
+  <!-- CALENDAR TAB -->
+  <div id="tab-calendar" class="tab-content">
+    <div class="card">
+      <div class="card-title">
+        <div class="cal-nav">
+          <button class="cal-btn" onclick="navMonth(-1)">‹</button>
+          <span class="cal-label" id="cal-label"></span>
+          <button class="cal-btn" onclick="navMonth(1)">›</button>
+        </div>
+        <span>📅 Cycle Calendar</span>
+      </div>
+      <div class="cal-head" id="cal-head"></div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div class="legend">
+        <div class="leg"><div class="leg-dot" style="background:rgba(201,24,74,.6);border:1px solid #c9184a"></div>Period</div>
+        <div class="leg"><div class="leg-dot" style="background:rgba(82,183,136,.45);border:1px solid #52b788"></div>Fertile</div>
+        <div class="leg"><div class="leg-dot" style="background:rgba(255,194,209,.5);border:2px solid #ffc2d1"></div>Ovulation</div>
+        <div class="leg"><div class="leg-dot" style="border:2.5px solid #fff"></div>Today</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WELLNESS TAB -->
+  <div id="tab-wellness" class="tab-content">
+    <div class="card">
+      <div class="card-title"><span>💧 Daily Wellness Checklist</span></div>
+      <div class="wellness-grid" id="wellness-grid">
+        <div class="well-item" onclick="toggleWell(this,'water')" id="w-water"><span class="w-icon">💧</span><span class="w-label">Drank water</span></div>
+        <div class="well-item" onclick="toggleWell(this,'vitamins')" id="w-vitamins"><span class="w-icon">💊</span><span class="w-label">Vitamins</span></div>
+        <div class="well-item" onclick="toggleWell(this,'exercise')" id="w-exercise"><span class="w-icon">🏃‍♀️</span><span class="w-label">Exercise</span></div>
+        <div class="well-item" onclick="toggleWell(this,'sleep')" id="w-sleep"><span class="w-icon">😴</span><span class="w-label">8hrs sleep</span></div>
+        <div class="well-item" onclick="toggleWell(this,'meditation')" id="w-meditation"><span class="w-icon">🧘‍♀️</span><span class="w-label">Meditation</span></div>
+        <div class="well-item" onclick="toggleWell(this,'nutrition')" id="w-nutrition"><span class="w-icon">🥗</span><span class="w-label">Healthy meal</span></div>
+        <div class="well-item" onclick="toggleWell(this,'selfcare')" id="w-selfcare"><span class="w-icon">🛁</span><span class="w-label">Self-care</span></div>
+        <div class="well-item" onclick="toggleWell(this,'gratitude')" id="w-gratitude"><span class="w-icon">🙏</span><span class="w-label">Gratitude</span></div>
+      </div>
+      <div style="margin-top:16px;text-align:center;">
+        <div style="font-size:.85rem;color:var(--text-muted);">Today's wellness score</div>
+        <div id="wellness-score" style="font-size:2rem;font-weight:800;background:linear-gradient(135deg,#52b788,#a8e6cf);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-top:4px;">0 / 8</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>🌿 Nutrition for Your Phase</span></div>
+      <div class="tips-list" id="nutrition-tips"></div>
+    </div>
+  </div>
+
+  <!-- INSIGHTS TAB -->
+  <div id="tab-insights" class="tab-content">
+    <div class="grid-2">
+      <div class="stat-card"><div class="stat-num small" id="insight-cycle-num">—</div><div class="stat-label">Cycles since start</div></div>
+      <div class="stat-card"><div class="stat-num small" id="insight-days-tracking">—</div><div class="stat-label">Days tracked</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>🧬 Hormone Knowledge</span></div>
+      <div class="tips-list" id="hormone-facts"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>📖 Cycle Phase Guide</span></div>
+      <div id="phase-guide"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ── Constants ── */
+  const CYCLE_START = new Date('2026-06-21T12:00:00');
+  const CYCLE_LEN = 28, PERIOD_DUR = 5;
+  const OV_DAY = CYCLE_LEN - 14, FERT_S = OV_DAY - 4, FERT_E = OV_DAY + 1;
+  const MO = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  let logs = JSON.parse(localStorage.getItem('luna_logs') || '[]');
+  let wellnessState = JSON.parse(localStorage.getItem('luna_wellness_' + todayStr()) || '{}');
+  let viewYr, viewMo, selectedMood = '', selectedFlow = '', selectedEnergy = '', selectedSleep = '';
+
+  function todayStr() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+
+  function getCycleDay(date) {
+    const d = new Date(date); d.setHours(12,0,0,0);
+    const diff = Math.round((d - CYCLE_START) / 864e5);
+    return ((diff % CYCLE_LEN) + CYCLE_LEN) % CYCLE_LEN;
+  }
+
+  function fmtDate(d) { return d.toLocaleDateString('en-IN', {day:'numeric',month:'long',year:'numeric'}); }
+
+  function fromNow(d) {
+    const today = new Date(); today.setHours(12,0,0,0);
+    const dt = new Date(d); dt.setHours(12,0,0,0);
+    const n = Math.round((dt - today) / 864e5);
+    if (n === 0) return 'Today'; if (n === 1) return 'Tomorrow'; if (n < 0) return (-n)+'d ago';
+    return 'in '+n+' days';
+  }
+
+  function addDays(n) { const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate()+n); return d; }
+
+  /* ── Splash ── */
+  let splashDone = false;
+  function dismissSplash() {
+    if (splashDone) return; splashDone = true;
+    document.getElementById('splash').classList.add('gone');
+    document.getElementById('app').classList.add('visible');
+  }
+  setTimeout(dismissSplash, 4000);
+
+  (function addParticles() {
+    const s = document.getElementById('splash');
+    for (let i = 0; i < 22; i++) {
+      const p = document.createElement('div'); p.className = 'ptcl';
+      const sz = Math.random()*6+3;
+      p.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;animation-duration:${Math.random()*8+5}s;animation-delay:${Math.random()*4}s`;
+      s.appendChild(p);
+    }
+  })();
+
+  /* ── Affirmations ── */
+  const AFFIRMATIONS = [
+    { text: '"Your body is doing extraordinary things every single day. Trust it, honour it."', attr: '— Luna' },
+    { text: '"You are not defined by your symptoms. You are defined by how beautifully you rise each day."', attr: '— Luna' },
+    { text: '"Cycles are not a burden. They are proof of your incredible power and resilience."', attr: '— Luna' },
+    { text: '"Rest is not weakness. In every quiet moment, your body is working miracles."', attr: '— Luna' },
+    { text: '"You deserve gentleness — especially from yourself."', attr: '— Luna' },
+    { text: '"Your emotions are not too much. They are signals from a body that cares deeply."', attr: '— Luna' },
+    { text: '"Every phase of your cycle holds a different kind of magic. You are always enough."', attr: '— Luna' },
+  ];
+  let affIdx = 0;
+
+  function renderAff() {
+    document.getElementById('aff-text').textContent = AFFIRMATIONS[affIdx].text;
+    document.getElementById('aff-attr').textContent = AFFIRMATIONS[affIdx].attr;
+    const dots = document.getElementById('aff-dots');
+    dots.innerHTML = AFFIRMATIONS.map((_,i) =>
+      `<div class="aff-dot ${i===affIdx?'active':''}" onclick="goAff(${i})"></div>`
+    ).join('');
+  }
+  function goAff(i) { affIdx = i; renderAff(); }
+  setInterval(() => { affIdx = (affIdx+1) % AFFIRMATIONS.length; renderAff(); }, 6000);
+  renderAff();
+
+  /* ── Phase Data ── */
+  const PHASES = [
+    {
+      name:'Menstrual Phase', color:'#ff4d6d',
+      desc:'Your uterus is shedding its lining. Estrogen and progesterone are at their lowest. It\'s natural to feel tired and introspective. This is a time for deep rest.',
+      tips:[
+        {icon:'🌡️', text:'Use a heating pad on your lower abdomen to ease cramps naturally.'},
+        {icon:'🍵', text:'Sip on ginger or chamomile tea to reduce inflammation and bloating.'},
+        {icon:'🛌', text:'Prioritise 8+ hours of sleep. Your body is doing heavy work.'},
+        {icon:'🚶‍♀️', text:'Gentle walks or light yoga — avoid intense workouts if you feel drained.'},
+      ],
+      nutrition:[
+        {icon:'🥩', text:'Iron-rich foods: red meat, lentils, spinach — replenish what you lose.'},
+        {icon:'🍫', text:'Dark chocolate: magnesium to ease cramps and boost mood.'},
+        {icon:'🫐', text:'Anti-inflammatory berries and leafy greens to reduce swelling.'},
+      ]
+    },
+    {
+      name:'Follicular Phase', color:'#ff8fa3',
+      desc:'Estrogen is rising as your follicles develop. Energy returns, brain fog lifts, and creativity sparks. This is your "fresh start" phase — embrace it!',
+      tips:[
+        {icon:'💡', text:'Tackle your most creative and challenging tasks. Mental clarity is at its peak.'},
+        {icon:'🏋️‍♀️', text:'A great time for strength training and trying new exercise routines.'},
+        {icon:'🌱', text:'Start something new — a project, a habit, a plan. Your energy supports it.'},
+        {icon:'👯‍♀️', text:'Social time is energising right now. Reconnect with friends.'},
+      ],
+      nutrition:[
+        {icon:'🥚', text:'Protein and fermented foods support estrogen metabolism.'},
+        {icon:'🥦', text:'Cruciferous vegetables (broccoli, kale) help process estrogen efficiently.'},
+        {icon:'🫚', text:'Healthy fats like avocado and flaxseeds support hormone production.'},
+      ]
+    },
+    {
+      name:'Ovulatory Phase', color:'#ffc2d1',
+      desc:'Estrogen peaks and LH surges. You may feel your most attractive, confident, and social. Communication skills are heightened. This is your "superwoman" window.',
+      tips:[
+        {icon:'🗣️', text:'Schedule important conversations, presentations, or interviews today.'},
+        {icon:'💃', text:'Your libido and confidence peak — embrace it and feel fabulous.'},
+        {icon:'☀️', text:'Get outside! Sunlight and social interaction feel extra nourishing now.'},
+        {icon:'🏃‍♀️', text:'High-intensity workouts like HIIT or running feel amazing during ovulation.'},
+      ],
+      nutrition:[
+        {icon:'🥗', text:'Lighter, raw foods: salads, smoothies, and fresh fruit.'},
+        {icon:'🧄', text:'Anti-inflammatory foods like turmeric and ginger support egg release.'},
+        {icon:'💧', text:'Stay extra hydrated — cervical mucus changes increase fluid needs.'},
+      ]
+    },
+    {
+      name:'Luteal Phase', color:'#c9184a',
+      desc:'Progesterone rises preparing for potential pregnancy. If no egg is fertilised, both hormones drop, triggering PMS. Focus inward, slow down, and nurture yourself.',
+      tips:[
+        {icon:'🧘‍♀️', text:'Prioritise stress reduction — yoga, meditation, or long baths.'},
+        {icon:'📔', text:'Journaling helps process the emotional waves that arrive in this phase.'},
+        {icon:'🌙', text:'Wind down your schedule. Saying no to things is self-care, not selfishness.'},
+        {icon:'🍕', text:'Cravings are real and hormonal. Honour them mindfully — you\'re not weak.'},
+      ],
+      nutrition:[
+        {icon:'🌾', text:'Complex carbs (oats, brown rice) stabilise mood and reduce cravings.'},
+        {icon:'🥑', text:'Magnesium-rich foods ease PMS: pumpkin seeds, almonds, dark leafy greens.'},
+        {icon:'🍵', text:'Reduce caffeine and alcohol — they worsen PMS symptoms.'},
+      ]
+    }
+  ];
+
+  function getPhaseIndex(cd) {
+    if (cd < PERIOD_DUR) return 0;
+    if (cd < OV_DAY - 1) return 1;
+    if (cd <= OV_DAY + 1) return 2;
+    return 3;
+  }
+
+  /* ── Stats ── */
+  (function renderStats() {
+    const today = new Date(); today.setHours(12,0,0,0);
+    const cd = getCycleDay(today);
+    const day = cd+1, until = CYCLE_LEN-cd;
+    const ph = PHASES[getPhaseIndex(cd)];
+
+    document.getElementById('stat-day').textContent = 'Day '+day;
+    document.getElementById('stat-until').textContent = until;
+    document.getElementById('stat-phase-mini').textContent = ph.name.split(' ')[0];
+
+    const badge = document.getElementById('phase-badge');
+    badge.textContent = ph.name;
+    badge.style.cssText = `background:${ph.color}22;border:1px solid ${ph.color};color:#fff`;
+    document.getElementById('phase-desc').textContent = ph.desc;
+
+    // tips
+    const tl = document.getElementById('tips-list');
+    tl.innerHTML = ph.tips.map(t => `<div class="tip-row"><span class="tip-icon">${t.icon}</span><span class="tip-text">${t.text}</span></div>`).join('');
+
+    // nutrition
+    const nl = document.getElementById('nutrition-tips');
+    nl.innerHTML = ph.nutrition.map(t => `<div class="tip-row"><span class="tip-icon">${t.icon}</span><span class="tip-text">${t.text}</span></div>`).join('');
+  })();
+
+  /* ── Hormone Chart ── */
+  (function renderHormones() {
+    const today = new Date(); today.setHours(12,0,0,0);
+    const cd = getCycleDay(today);
+    const days = 7;
+    let html = '';
+    for (let i = -(Math.floor(days/2)); i <= Math.floor(days/2); i++) {
+      const d = cd + i;
+      const dd = ((d % CYCLE_LEN) + CYCLE_LEN) % CYCLE_LEN;
+      // Estrogen curve: peaks at OV_DAY
+      const estr = Math.max(5, Math.round(100 * Math.exp(-Math.pow(dd - OV_DAY, 2) / 60)));
+      // Progesterone: rises after OV_DAY
+      const prog = dd > OV_DAY ? Math.max(5, Math.round(80 * Math.exp(-Math.pow(dd - (OV_DAY+7), 2) / 30))) : 5;
+      // LH spike at OV_DAY
+      const lh = Math.max(0, Math.round(90 * Math.exp(-Math.pow(dd - OV_DAY, 2) / 4)));
+      const isNow = i === 0;
+      html += `<div class="hbar-wrap" title="Day ${dd+1}">
+        <div style="display:flex;flex-direction:column;gap:2px;flex:1;width:100%;justify-content:flex-end;height:100%;">
+          <div class="hbar" style="height:${estr}%;background:${isNow?'#ff8fa3':'rgba(255,143,163,.45)'};"></div>
+        </div>
+        <div class="hbar-label">${isNow?'<b style="color:#fff">Now</b>':'D'+(dd+1)}</div>
+      </div>`;
+    }
+    document.getElementById('hormone-chart').innerHTML = html;
+  })();
+
+  /* ── Predictions ── */
+  (function renderPredictions() {
+    const today = new Date(); today.setHours(12,0,0,0);
+    const cd = getCycleDay(today);
+    function dLeft(t) { const d=((t-cd)%CYCLE_LEN+CYCLE_LEN)%CYCLE_LEN; return d===0?CYCLE_LEN:d; }
+    const events = [
+      {label:'Next Period Starts',  date:addDays(dLeft(0)),      color:'#c9184a'},
+      {label:'Fertile Window Opens',date:addDays(dLeft(FERT_S)), color:'#52b788'},
+      {label:'Ovulation Day',       date:addDays(dLeft(OV_DAY)), color:'#ffc2d1'},
+      {label:'Period After Next',   date:addDays(dLeft(0)+CYCLE_LEN), color:'#c9184a'},
+    ];
+    document.getElementById('pred-list').innerHTML = events.map(e=>`
+      <div class="pred-row">
+        <div class="pred-dot" style="background:${e.color};box-shadow:0 0 8px ${e.color}80"></div>
+        <div class="pred-info"><div class="pred-name">${e.label}</div><div class="pred-date">${fmtDate(e.date)}</div></div>
+        <div class="pred-tag">${fromNow(e.date)}</div>
+      </div>`).join('');
+  })();
+
+  /* ── Calendar ── */
+  function renderCalendar() {
+    const today = new Date(); today.setHours(12,0,0,0);
+    document.getElementById('cal-head').innerHTML = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<span>${d}</span>`).join('');
+    document.getElementById('cal-label').textContent = MO[viewMo]+' '+viewYr;
+    const first = new Date(viewYr, viewMo, 1).getDay();
+    const dim   = new Date(viewYr, viewMo+1, 0).getDate();
+    let html = '';
+    for (let i=0; i<first; i++) html += '<div class="empty"></div>';
+    for (let d=1; d<=dim; d++) {
+      const cur = new Date(viewYr, viewMo, d, 12);
+      const cd = getCycleDay(cur);
+      const isToday = cur.getTime()===today.getTime();
+      const dStr = viewYr+'-'+String(viewMo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      const hasLog = logs.find(l=>l.date===dStr);
+      let cls = '';
+      if (cd < PERIOD_DUR) cls = 'period';
+      else if (cd === OV_DAY) cls = 'ovulation';
+      else if (cd >= FERT_S && cd <= FERT_E) cls = 'fertile';
+      if (isToday) cls += ' today';
+      if (hasLog) cls += ' logged';
+      html += `<div class="${cls.trim()}" title="${MO[viewMo]} ${d}">${d}</div>`;
+    }
+    document.getElementById('cal-grid').innerHTML = html;
+  }
+  function navMonth(dir) {
+    viewMo += dir;
+    if (viewMo>11){viewMo=0;viewYr++;} if (viewMo<0){viewMo=11;viewYr--;}
+    renderCalendar();
+  }
+
+  /* ── Wellness ── */
+  function toggleWell(el, key) {
+    el.classList.toggle('done');
+    wellnessState[key] = el.classList.contains('done');
+    localStorage.setItem('luna_wellness_'+todayStr(), JSON.stringify(wellnessState));
+    updateWellnessScore();
+  }
+  function updateWellnessScore() {
+    const score = Object.values(wellnessState).filter(Boolean).length;
+    document.getElementById('wellness-score').textContent = score + ' / 8';
+  }
+  // restore wellness state
+  (function restoreWellness() {
+    Object.entries(wellnessState).forEach(([k,v]) => {
+      if (v) { const el = document.getElementById('w-'+k); if(el) el.classList.add('done'); }
+    });
+    updateWellnessScore();
+  })();
+
+  /* ── Insights ── */
+  (function renderInsights() {
+    const today = new Date(); today.setHours(12,0,0,0);
+    const days = Math.round((today - CYCLE_START) / 864e5) + 1;
+    const cycles = Math.floor(days / CYCLE_LEN);
+    document.getElementById('insight-days-tracking').textContent = days + 'd';
+    document.getElementById('insight-cycle-num').textContent = cycles;
+
+    document.getElementById('hormone-facts').innerHTML = [
+      {icon:'🔴', text:'<b>Estrogen</b> is your energy and mood hormone. It peaks at ovulation making you feel confident and social.'},
+      {icon:'🟣', text:'<b>Progesterone</b> rises after ovulation. It\'s calming but can cause fatigue, bloating, and mood dips in excess.'},
+      {icon:'🟡', text:'<b>LH (Luteinising Hormone)</b> triggers ovulation. It surges sharply 24-36 hours before the egg is released.'},
+      {icon:'🔵', text:'<b>FSH (Follicle Stimulating Hormone)</b> rises at the start of your cycle to develop follicles containing eggs.'},
+    ].map(f=>`<div class="tip-row"><span class="tip-icon">${f.icon}</span><span class="tip-text">${f.text}</span></div>`).join('');
+
+    document.getElementById('phase-guide').innerHTML = PHASES.map(p=>`
+      <div style="padding:14px 0;border-bottom:1px solid rgba(255,255,255,.06);">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:${p.color}"></div>
+          <strong style="color:#fff;font-size:.95rem;">${p.name}</strong>
+        </div>
+        <p style="color:var(--text-muted);font-size:.87rem;line-height:1.65;">${p.desc.substring(0,130)}…</p>
+      </div>`).join('');
+  })();
+
+  /* ── Log ── */
+  document.getElementById('log-today-date').textContent = new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'});
+
+  function selectMood(el, mood) {
+    document.querySelectorAll('.mood-btn').forEach(b=>b.classList.remove('sel'));
+    el.classList.add('sel'); selectedMood = mood;
+  }
+
+  function togglePill(el, group, selClass) {
+    document.querySelectorAll(`#${group}-pills .pill`).forEach(p=>p.classList.remove(selClass));
+    el.classList.add(selClass);
+    if (group==='flow') selectedFlow=el.textContent;
+    if (group==='energy') selectedEnergy=el.textContent;
+    if (group==='sleep') selectedSleep=el.textContent;
+  }
+
+  function toggleMultiPill(el, selClass) {
+    el.classList.toggle(selClass);
+  }
+
+  function saveLog() {
+    const today = todayStr();
+    const symptoms = [...document.querySelectorAll('#symptom-pills .sel-lav')].map(p=>p.textContent);
+    const entry = {
+      date: today,
+      mood: selectedMood,
+      flow: selectedFlow,
+      symptoms,
+      energy: selectedEnergy,
+      sleep: selectedSleep,
+      notes: document.getElementById('log-notes').value,
+      saved: new Date().toISOString()
+    };
+    logs = logs.filter(l=>l.date!==today);
+    logs.unshift(entry);
+    logs = logs.slice(0,60);
+    localStorage.setItem('luna_logs', JSON.stringify(logs));
+    const msg = document.getElementById('save-msg');
+    msg.textContent = '✓ Saved! Looking after yourself is an act of love.';
+    setTimeout(()=>{ msg.textContent=''; }, 4000);
+    renderRecentLogs();
+  }
+
+  function renderRecentLogs() {
+    const el = document.getElementById('recent-logs');
+    if (!logs.length) { el.innerHTML='<p style="color:var(--text-muted);font-size:.9rem;">No entries yet.</p>'; return; }
+    el.innerHTML = logs.slice(0,7).map(l=>{
+      let tags = '';
+      if (l.mood)    tags += `<span class="tag" style="background:rgba(201,24,74,.25);border:1px solid #c9184a;color:#fff;">${l.mood} mood</span>`;
+      if (l.flow && l.flow!=='No period') tags += `<span class="tag" style="background:rgba(255,77,109,.2);border:1px solid #ff4d6d;color:#fff;">${l.flow} flow</span>`;
+      if (l.energy)  tags += `<span class="tag" style="background:rgba(244,162,97,.2);border:1px solid #f4a261;color:#ffd6b0;">${l.energy} energy</span>`;
+      if (l.sleep)   tags += `<span class="tag" style="background:rgba(82,183,136,.2);border:1px solid #52b788;color:#a8e6cf;">${l.sleep} sleep</span>`;
+      (l.symptoms||[]).forEach(s=>{ tags += `<span class="tag" style="background:rgba(181,160,216,.2);border:1px solid #b5a0d8;color:#ddd0ff;">${s}</span>`; });
+      return `<div class="log-entry">
+        <div class="log-date-label">${l.date}</div>
+        ${tags?`<div class="log-tags">${tags}</div>`:''}
+        ${l.notes?`<div class="log-note">${l.notes.substring(0,100)}${l.notes.length>100?'…':''}</div>`:''}
+      </div>`;
+    }).join('');
+  }
+  renderRecentLogs();
+
+  /* ── Tabs ── */
+  function showTab(name) {
+    document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('tab-'+name).classList.add('active');
+    event.target.classList.add('active');
+    if (name==='calendar') renderCalendar();
+  }
+
+  /* ── Init Calendar ── */
+  const now = new Date();
+  viewYr = now.getFullYear(); viewMo = now.getMonth();
+</script>
+</body>
+</html>
